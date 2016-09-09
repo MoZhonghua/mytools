@@ -44,7 +44,7 @@ func servConn(c, s *net.TCPConn) {
 }
 
 func main() {
-	flag.IntVar(&listenPort, "p", 7421, "local listening port")
+	flag.IntVar(&listenPort, "p", 2233, "local listening port")
 	flag.StringVar(&remoteAddr, "s", "", "tunnel server address")
 	flag.StringVar(&code, "c", "", "tunnel authentication code")
 	flag.Parse()

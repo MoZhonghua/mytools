@@ -62,7 +62,7 @@ type UpstreamServer struct {
 var upstreams = make(map[string]*UpstreamServer)
 
 func main() {
-	flag.IntVar(&listenPort, "p", 7422, "local listening port")
+	flag.IntVar(&listenPort, "p", 2222, "local listening port")
 	flag.Parse()
 
 	servers := flag.Args()
