@@ -2,6 +2,7 @@
 *.o
 *.a
 *.so
+bin
 
 # Folders
 _obj
@@ -20,5 +21,26 @@ _cgo_export.*
 _testmain.go
 
 *.exe
-*.test
-*.prof
+build_config.mk
+*.a
+*.o
+*.dylib*
+*.so
+*.so.*
+*_test
+.vimrc
+.ycm_extra_conf.py
+*.pyc
+*.gch
+build
+*.swp
+*.pb.h
+tags
+cscope.*
+.tmp
+core.*
+deps
+.vimrc
+.ycm_extra_conf.py
+onion
+jsoncpp
