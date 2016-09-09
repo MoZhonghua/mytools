@@ -7,10 +7,10 @@ server_bin=bin/tunnels
 all: $(client_bin) $(server_bin)
 
 $(client_bin): $(SOURCES)
-	go build -o ${client_bin} ./client
+	go build -o ${client_bin} ./tunnelc
 
 $(server_bin): $(SOURCES)
-	go build -o ${server_bin} ./server
+	go build -o ${server_bin} ./tunnels
 
 .PHONY: clean install
 clean:
