@@ -1,22 +1,19 @@
 package main
 
-import "net"
-import "fmt"
-import "time"
-import "strings"
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"net"
+	"strings"
+	"time"
+)
 
 type proxy struct {
-	listenAddr *net.TCPAddr
+	listenAddr string
 	remoteAddr []*net.TCPAddr
 }
 
-func newProxy(listenAddr string, remoteAddr string) (*proxy, error) {
-	l, e := net.ResolveTCPAddr("tcp", listenAddr)
-	if e != nil {
-		return nil, e
-	}
-
+func newProxy(port int, remoteAddr string) (*proxy, error) {
 	addrList := strings.Split(remoteAddr, ",")
 	if len(addrList) == 0 {
 		return nil, errors.New("empty remote address")
@@ -32,13 +29,13 @@ func newProxy(listenAddr string, remoteAddr string) (*proxy, error) {
 	}
 
 	return &proxy{
-		listenAddr: l,
+		listenAddr: fmt.Sprintf(":%d", port),
 		remoteAddr: ra,
 	}, nil
 }
 
 func (p *proxy) serv() {
-	ln, err := net.ListenTCP("tcp", p.listenAddr)
+	ln, err := net.Listen("tcp4", p.listenAddr)
 	if err != nil {
 		panic(err)
 		return

@@ -23,10 +23,6 @@ func pipe(r net.Conn, w net.Conn, stop *sync.WaitGroup) {
 	buf := make([]byte, 4096)
 	for {
 		n, err := r.Read(buf)
-		if err != nil {
-			return
-		}
-
 		remain := buf[:n]
 		for len(remain) > 0 {
 			n2, err := w.Write(remain)
@@ -35,6 +31,10 @@ func pipe(r net.Conn, w net.Conn, stop *sync.WaitGroup) {
 			}
 
 			remain = remain[n2:]
+		}
+		if err != nil {
+			w.(*net.TCPConn).CloseWrite()
+			return
 		}
 	}
 }
