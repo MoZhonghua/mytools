@@ -75,7 +75,13 @@ func main() {
 	}
 	http.Handle("/", http.FileServer(http.Dir(absDir)))
 	handler := context.ClearHandler(weblogs.Handler(http.DefaultServeMux))
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
+
+	l, err := net.Listen("tcp4", fmt.Sprintf(":%d", port))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = http.Serve(l, handler)
 	if err != nil {
 		log.Fatal(err)
 	}
