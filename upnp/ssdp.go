@@ -98,8 +98,6 @@ func SSDPSearch(intf *net.Interface, deviceType string,
 			}
 			notify, err := ParseSSDPNotify(deviceType, resp[:n])
 			if err != nil {
-				log.Printf("invalid ssdp notify: %v\n%s",
-					err, string(resp[:n]))
 				continue
 			}
 			result <- notify
