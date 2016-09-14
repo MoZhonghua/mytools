@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -84,7 +85,7 @@ func main() {
 		{
 			Name:      "addportmap",
 			Usage:     "add port mapping",
-			ArgsUsage: "<igdURL> <localPort> <externalPort>",
+			ArgsUsage: "<igdURL> <localIP:localPort> <externalPort>",
 			Action:    cmdAddPortMapping,
 		},
 		{
@@ -174,6 +175,21 @@ func cmdSSDPSearch(c *cli.Context) error {
 	return nil
 }
 
+func parseIPPort(s string) (net.IP, int, error) {
+	f := strings.Split(s, ":")
+	if len(f) != 2 {
+		return nil, 0, fmt.Errorf("invalid addr: %s", s)
+	}
+
+	ip := net.ParseIP(f[0])
+	port, err := parseInt(f[1])
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return ip, port, nil
+}
+
 func cmdAddPortMapping(c *cli.Context) error {
 	if len(c.Args()) < 3 {
 		cli.ShowSubcommandHelp(c)
@@ -194,7 +210,7 @@ func cmdAddPortMapping(c *cli.Context) error {
 		fail("error: %v", err)
 	}
 
-	localPort, err := parseInt(c.Args()[1])
+	localIP, localPort, err := parseIPPort(c.Args()[1])
 	if err != nil {
 		fail("error: %v", err)
 	}
@@ -209,7 +225,7 @@ func cmdAddPortMapping(c *cli.Context) error {
 			fail("error: %v", err)
 		}
 
-		err = s.AddPortMapping(hc, igd.LocalIPAddress.String(),
+		err = s.AddPortMapping(hc, localIP.String(),
 			"TCP", localPort, externalPort, "", 0)
 		if err != nil {
 			fail("error: %v", err)
@@ -217,7 +233,7 @@ func cmdAddPortMapping(c *cli.Context) error {
 
 		fmt.Printf("Port mapping %s:%d -> %s:%d OK!\n",
 			externalIP.String(), externalPort,
-			igd.LocalIPAddress.String(), localPort)
+			localIP.String(), localPort)
 
 		return nil
 	}
