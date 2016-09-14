@@ -58,7 +58,7 @@ func buildSSDPSearchPackage(deviceType string, timeout time.Duration) []byte {
 		"ST: %s\r\n" +
 		"MAN: \"ssdp:discover\"\r\n" +
 		"MX: %d\r\n" +
-		"USER-AGENT: syncthing/1.0\r\n" +
+		"USER-AGENT: UPnP/1.0\r\n" +
 		"\r\n"
 
 	pkt := fmt.Sprintf(tpl, deviceType, timeout/time.Second)
@@ -98,6 +98,8 @@ func SSDPSearch(intf *net.Interface, deviceType string,
 			}
 			notify, err := ParseSSDPNotify(deviceType, resp[:n])
 			if err != nil {
+				log.Printf("invalid ssdp notify: %v\n%s",
+					err, string(resp[:n]))
 				continue
 			}
 			result <- notify
