@@ -85,13 +85,13 @@ func main() {
 		{
 			Name:      "addportmap",
 			Usage:     "add port mapping",
-			ArgsUsage: "<igdURL> <localIP:localPort> <externalPort>",
+			ArgsUsage: "<igdDeviceIP> <localIP:localPort> <externalPort>",
 			Action:    cmdAddPortMapping,
 		},
 		{
 			Name:      "deleteportmap",
 			Usage:     "delete port mapping",
-			ArgsUsage: "<igdURL> <externalPort>",
+			ArgsUsage: "<igdDeviceIP> <externalPort>",
 			Action:    cmdDelPortMapping,
 		},
 	}
@@ -202,7 +202,8 @@ func cmdAddPortMapping(c *cli.Context) error {
 
 	hc := createHttpClient()
 
-	igdURL := c.Args()[0]
+	igdDeviceIP := c.Args()[0]
+	igdURL := fmt.Sprintf("http://%s:1900/igd.xml", igdDeviceIP)
 
 	root, err := upnp.GetUPnPData(igdURL)
 	if err != nil {
@@ -250,7 +251,8 @@ func cmdDelPortMapping(c *cli.Context) error {
 		os.Exit(1)
 	}
 
-	igdURL := c.Args()[0]
+	igdDeviceIP := c.Args()[0]
+	igdURL := fmt.Sprintf("http://%s:1900/igd.xml", igdDeviceIP)
 
 	root, err := upnp.GetUPnPData(igdURL)
 	if err != nil {
