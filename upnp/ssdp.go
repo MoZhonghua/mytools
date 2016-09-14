@@ -71,14 +71,15 @@ func SSDPSearch(intf *net.Interface, deviceType string,
 	result := make(chan *SSDPNotify, 16)
 	search := buildSSDPSearchPackage(deviceType, timeout)
 
-	ssdp := &net.UDPAddr{IP: []byte{239, 255, 255, 250}, Port: 1900}
-	conn, err := net.ListenMulticastUDP("udp4", intf, ssdp)
+	local := &net.UDPAddr{IP: []byte{239, 255, 255, 250}, Port: 0}
+	conn, err := net.ListenMulticastUDP("udp4", intf, local)
 	if err != nil {
 		return nil, err
 	}
 	conn.SetDeadline(time.Now().Add(timeout))
 
-	_, err = conn.WriteTo(search, ssdp)
+	dst := &net.UDPAddr{IP: []byte{239, 255, 255, 250}, Port: 1900}
+	_, err = conn.WriteTo(search, dst)
 	if err != nil {
 		conn.Close()
 		return nil, err
