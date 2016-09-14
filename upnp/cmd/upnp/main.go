@@ -70,6 +70,12 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
+			Name:      "listinterface",
+			Usage:     "list all network interfaces",
+			ArgsUsage: "",
+			Action:    cmdListInterface,
+		},
+		{
 			Name:      "ssdpsearch",
 			Usage:     "SSDP Search",
 			ArgsUsage: "<interface>",
@@ -121,6 +127,18 @@ func createHttpClient() *util.HttpClient {
 		fail("error: %v", err)
 	}
 	return c
+}
+
+func cmdListInterface(c *cli.Context) error {
+	intfs, err := net.Interfaces()
+	if err != nil {
+		fail("error: %v", err)
+	}
+
+	for _, intf := range intfs {
+		fmt.Printf("%s %s\n", intf.Name, intf.Flags.String())
+	}
+	return nil
 }
 
 func cmdSSDPSearch(c *cli.Context) error {
