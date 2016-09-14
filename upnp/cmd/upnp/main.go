@@ -77,9 +77,9 @@ func main() {
 			Action:    cmdListInterface,
 		},
 		{
-			Name:      "ssdpsearch",
+			Name:      "ssdp",
 			Usage:     "SSDP Search",
-			ArgsUsage: "<interface>",
+			ArgsUsage: "<interface> [destIP]",
 			Action:    cmdSSDPSearch,
 		},
 		{
@@ -100,21 +100,6 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func discover(wg *sync.WaitGroup, intf *net.Interface, deviceType string,
-	timeout time.Duration) error {
-	defer wg.Done()
-	results, err := upnp.SSDPSearch(intf, deviceType, timeout)
-	if err != nil {
-		fmt.Printf("failed to SSDP Search on %s: %v\n", intf.Name, err)
-		return nil
-	}
-	for n := range results {
-		b, _ := json.MarshalIndent(n, "", "    ")
-		fmt.Println(string(b))
-	}
-	return nil
 }
 
 func createHttpClient() *util.HttpClient {
@@ -142,6 +127,21 @@ func cmdListInterface(c *cli.Context) error {
 	return nil
 }
 
+func doSearch(wg *sync.WaitGroup, intf *net.Interface, deviceType string,
+	ip net.IP, timeout time.Duration) error {
+	defer wg.Done()
+	results, err := upnp.SSDPSearch(intf, deviceType, ip, timeout)
+	if err != nil {
+		fmt.Printf("failed to SSDP Search on %s: %v\n", intf.Name, err)
+		return nil
+	}
+	for n := range results {
+		b, _ := json.MarshalIndent(n, "", "    ")
+		fmt.Println(string(b))
+	}
+	return nil
+}
+
 func cmdSSDPSearch(c *cli.Context) error {
 	if len(c.Args()) < 1 {
 		cli.ShowSubcommandHelp(c)
@@ -149,6 +149,10 @@ func cmdSSDPSearch(c *cli.Context) error {
 	}
 
 	intfName := c.Args()[0]
+	destIP := upnp.SSDPMulticastAddr
+	if len(c.Args()) >= 2 {
+		destIP = net.ParseIP(c.Args()[1])
+	}
 
 	intfs, err := net.Interfaces()
 	if err != nil {
@@ -168,7 +172,7 @@ func cmdSSDPSearch(c *cli.Context) error {
 
 		for _, deviceType := range devTypes {
 			wg.Add(1)
-			discover(&wg, &intf, deviceType, 10*time.Second)
+			doSearch(&wg, &intf, deviceType, destIP, 5*time.Second)
 		}
 	}
 	wg.Wait()

@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+var (
+	SSDPMulticastAddr = []byte{239, 255, 255, 250}
+)
+
 type SSDPNotify struct {
 	DeviceUUID                string `json:"uuid"`
 	RespondingDeviceType      string `json:"deviceType"`
@@ -65,7 +69,8 @@ func buildSSDPSearchPackage(deviceType string, timeout time.Duration) []byte {
 	return []byte(pkt)
 }
 
-func SSDPSearch(intf *net.Interface, deviceType string,
+func SSDPSearch(intf *net.Interface,
+	deviceType string, destIP net.IP,
 	timeout time.Duration) (<-chan *SSDPNotify, error) {
 
 	result := make(chan *SSDPNotify, 16)
@@ -78,7 +83,7 @@ func SSDPSearch(intf *net.Interface, deviceType string,
 	}
 	conn.SetDeadline(time.Now().Add(timeout))
 
-	dst := &net.UDPAddr{IP: []byte{239, 255, 255, 250}, Port: 1900}
+	dst := &net.UDPAddr{IP: destIP, Port: 1900}
 	_, err = conn.WriteTo(search, dst)
 	if err != nil {
 		conn.Close()
