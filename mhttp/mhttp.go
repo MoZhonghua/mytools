@@ -60,8 +60,8 @@ func main() {
 	var port int
 	var rootdir string
 
-	flag.StringVar(&rootdir, "root", ".", "root directory")
-	flag.IntVar(&port, "port", 80, "listening port")
+	flag.StringVar(&rootdir, "r", ".", "root directory")
+	flag.IntVar(&port, "p", 80, "listening port")
 	flag.Parse()
 
 	absDir, err := filepath.Abs(rootdir)
