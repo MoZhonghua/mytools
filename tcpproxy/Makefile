@@ -5,17 +5,17 @@ SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
 default: all
 
 
-cli=bin/tcpproxy-cli
-$(cli): $(SOURCES)
-	go build -o ${cli} ./cmd/cli
+tcpproxy-cli=bin/tcpproxy-cli
+$(tcpproxy-cli): $(SOURCES)
+	go build -o ${tcpproxy-cli} ./cmd/tcpproxy-cli
 
 
-server=bin/tcpproxy-server
-$(server): $(SOURCES)
-	go build -o ${server} ./cmd/server
+tcpproxy-server=bin/tcpproxy-server
+$(tcpproxy-server): $(SOURCES)
+	go build -o ${tcpproxy-server} ./cmd/tcpproxy-server
 
 
-all: $(cli) $(server) 
+all: $(tcpproxy-cli) $(tcpproxy-server) 
 	
 .PHONY: clean
 clean:
