@@ -29,8 +29,7 @@ func newPortMapping(localPort int, remoteAddr *net.TCPAddr,
 func (m *portMapping) stop() {
 	close(m.stopCh)
 	m.waitStopped.Wait()
-	m.logger.Printf("CLOSE :%d -> %v",
-		m.localPort, m.remoteAddr)
+	m.logger.Printf("close port mapping :%d -> %v", m.localPort, m.remoteAddr)
 }
 
 func (m *portMapping) servLoop(l net.Listener) {
@@ -42,12 +41,14 @@ func (m *portMapping) servLoop(l net.Listener) {
 			select {
 			case <-m.stopCh:
 				return
+			default:
 			}
 			conn, err := l.Accept()
 			if err != nil {
 				m.logger.Printf("%v", err)
 				continue
 			}
+			m.logger.Printf("new connection @ %v", conn.LocalAddr())
 			connCh <- conn
 		}
 	}()
@@ -72,7 +73,7 @@ func (m *portMapping) start() error {
 		return err
 	}
 
-	m.logger.Printf("OPEN :%d -> %v", m.localPort, m.remoteAddr)
+	m.logger.Printf("new port mapping :%d -> %v", m.localPort, m.remoteAddr)
 
 	go m.servLoop(l)
 	return nil
@@ -85,6 +86,8 @@ func (m *portMapping) handleConn(l net.Conn) error {
 		return err
 	}
 	defer r.Close()
+
+	m.logger.Printf("pipe %v -> %v ", l.LocalAddr(), r.RemoteAddr())
 
 	var wg sync.WaitGroup
 	wg.Add(2)
