@@ -1,17 +1,22 @@
 SOURCEDIR=.
 SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
 
-bin=bin/tcpproxy
+.PHONY: default
+default: all
 
-all: $(bin) 
 
-$(bin): $(SOURCES)
-	go build -o ${bin} ./
+cli=bin/cli
+$(cli): $(SOURCES)
+	go build -o ${cli} ./cmd/cli
 
-.PHONY: clean install
+
+server=bin/server
+$(server): $(SOURCES)
+	go build -o ${server} ./cmd/server
+
+
+all: $(cli) $(server) 
+	
+.PHONY: clean
 clean:
 	rm -fv bin/*
-
-install:
-	install -d /opt/tools/tcpproxy/bin/
-	install ${bin} -t /opt/tools/tcpproxy/bin/
