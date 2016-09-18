@@ -35,7 +35,7 @@ func (p *Proxy) AddPortMapping(localPort int, remoteAddr *net.TCPAddr) error {
 		return ErrLocalPortUsed
 	}
 
-	m := newPortMapping(localPort, remoteAddr)
+	m := newPortMapping(localPort, remoteAddr, p.logger)
 	err := m.start()
 	if err != nil {
 		return err

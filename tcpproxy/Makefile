@@ -5,12 +5,12 @@ SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
 default: all
 
 
-cli=bin/cli
+cli=bin/tcpproxy-cli
 $(cli): $(SOURCES)
 	go build -o ${cli} ./cmd/cli
 
 
-server=bin/server
+server=bin/tcpproxy-server
 $(server): $(SOURCES)
 	go build -o ${server} ./cmd/server
 

@@ -12,13 +12,16 @@ type portMapping struct {
 	remoteAddr  *net.TCPAddr
 	stopCh      chan int
 	waitStopped sync.WaitGroup
+	logger      *log.Logger
 }
 
-func newPortMapping(localPort int, remoteAddr *net.TCPAddr) *portMapping {
+func newPortMapping(localPort int, remoteAddr *net.TCPAddr,
+	logger *log.Logger) *portMapping {
 	m := &portMapping{
 		localPort:  localPort,
 		remoteAddr: remoteAddr,
 		stopCh:     make(chan int),
+		logger:     logger,
 	}
 	return m
 }
@@ -26,6 +29,8 @@ func newPortMapping(localPort int, remoteAddr *net.TCPAddr) *portMapping {
 func (m *portMapping) stop() {
 	close(m.stopCh)
 	m.waitStopped.Wait()
+	m.logger.Printf("CLOSE :%d -> %v",
+		m.localPort, m.remoteAddr)
 }
 
 func (m *portMapping) servLoop(l net.Listener) {
@@ -34,9 +39,13 @@ func (m *portMapping) servLoop(l net.Listener) {
 	connCh := make(chan net.Conn, 64)
 	go func() {
 		for {
+			select {
+			case <-m.stopCh:
+				return
+			}
 			conn, err := l.Accept()
 			if err != nil {
-				log.Printf("accept() error: %v", err)
+				m.logger.Printf("%v", err)
 				continue
 			}
 			connCh <- conn
@@ -62,6 +71,8 @@ func (m *portMapping) start() error {
 	if err != nil {
 		return err
 	}
+
+	m.logger.Printf("OPEN :%d -> %v", m.localPort, m.remoteAddr)
 
 	go m.servLoop(l)
 	return nil

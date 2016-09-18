@@ -26,6 +26,9 @@ func NewHttpd(p *Proxy, logger *log.Logger) *Httpd {
 
 func (d *Httpd) Serv(port int) error {
 	m := mux.NewRouter()
+	m.Methods("POST").Path("/add").HandlerFunc(d.handleAddPortMapping)
+	m.Methods("DELETE").Path("/delete").HandlerFunc(d.handleDeletePortMapping)
+	m.Methods("GET").Path("/list").HandlerFunc(d.handleListPortMapping)
 
 	l, err := net.Listen("tcp4", fmt.Sprintf(":%d", port))
 	if err != nil {
