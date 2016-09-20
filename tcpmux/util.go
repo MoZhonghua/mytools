@@ -1,4 +1,4 @@
-package tunnel
+package tcpmux
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-func ReadCode(c io.Reader) (string, error) {
+func ReadHeader(c io.Reader) (string, error) {
 	lenBuf := make([]byte, 1)
 	_, err := io.ReadFull(c, lenBuf)
 	if err != nil {
@@ -28,7 +28,7 @@ func ReadCode(c io.Reader) (string, error) {
 	return string(buf), nil
 }
 
-func WriteCode(code string, c io.Writer) error {
+func WriteHeader(code string, c io.Writer) error {
 	len := len(code)
 	if len > 127 {
 		return errors.New("code too long")

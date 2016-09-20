@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 
-	"github.com/MoZhonghua/mytools/tcpproxy"
+	"github.com/MoZhonghua/mytools/tcpmux"
 	"github.com/codegangsta/cli"
 )
 
@@ -44,7 +43,7 @@ func main() {
 	app := cli.NewApp()
 	app.Version = "1.0"
 	app.Usage = ""
-	app.Name = ""
+	app.Name = "tcpmux-admin tool"
 	app.Author = "MoZhonghua"
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
 		fail("unknown command: %v", command)
@@ -65,8 +64,8 @@ func main() {
 		},
 		&cli.StringFlag{
 			Name:        "server",
-			Usage:       "server address",
-			Value:       "http://127.0.0.1:3333",
+			Usage:       "server admin address",
+			Value:       "http://127.0.0.1:6732",
 			Destination: &server,
 		},
 	}
@@ -74,19 +73,19 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:   "list",
-			Usage:  "list port mapping",
+			Usage:  "list target",
 			Action: cmdList,
 		},
 		{
 			Name:      "add",
-			Usage:     "add port mapping",
-			ArgsUsage: "<localPort> <remoteAddr(ip:port)>",
+			Usage:     "add target",
+			ArgsUsage: "<id> <target(ip:port)>",
 			Action:    cmdAdd,
 		},
 		{
 			Name:      "delete",
-			Usage:     "delete port mapping",
-			ArgsUsage: "<localPort>",
+			Usage:     "delete target",
+			ArgsUsage: "<id>",
 			Action:    cmdDelete,
 		},
 	}
@@ -97,8 +96,8 @@ func main() {
 	}
 }
 
-func createClient() *tcpproxy.Client {
-	client, err := tcpproxy.NewClient(server, logger, proxy, debug)
+func createClient() *tcpmux.Client {
+	client, err := tcpmux.NewClient(server, logger, proxy, debug)
 	exitOnError(err)
 	return client
 }
@@ -107,12 +106,11 @@ func cmdAdd(c *cli.Context) error {
 	if len(c.Args()) < 2 {
 		showHelp(c)
 	}
-	localPort, err := strconv.ParseInt(c.Args()[0], 10, 32)
-	exitOnError(err)
-	remoteAddr := c.Args()[1]
+	id := c.Args()[0]
+	target := c.Args()[1]
 
 	client := createClient()
-	err = client.AddPortMapping(int(localPort), remoteAddr)
+	err := client.AddTarget(id, target)
 	exitOnError(err)
 
 	fmt.Println("OK!")
@@ -123,11 +121,10 @@ func cmdDelete(c *cli.Context) error {
 	if len(c.Args()) < 1 {
 		showHelp(c)
 	}
-	localPort, err := strconv.ParseInt(c.Args()[0], 10, 32)
-	exitOnError(err)
+	id := c.Args()[0]
 
 	client := createClient()
-	err = client.DeletePortMapping(int(localPort))
+	err := client.DeleteTarget(id)
 	exitOnError(err)
 
 	fmt.Println("OK!")
@@ -136,7 +133,7 @@ func cmdDelete(c *cli.Context) error {
 
 func cmdList(c *cli.Context) error {
 	client := createClient()
-	m, err := client.ListPortMapping()
+	m, err := client.ListTarget()
 	exitOnError(err)
 
 	fmt.Println(marshalData(m))

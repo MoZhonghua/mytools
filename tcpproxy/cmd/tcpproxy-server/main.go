@@ -13,7 +13,7 @@ var (
 )
 
 func main() {
-	flag.IntVar(&port, "p", 3333, "managment port")
+	flag.IntVar(&port, "m", 3333, "admin port")
 	flag.Parse()
 
 	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
