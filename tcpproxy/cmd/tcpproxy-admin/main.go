@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -89,6 +90,12 @@ func main() {
 			ArgsUsage: "<localPort>",
 			Action:    cmdDelete,
 		},
+		{
+			Name:      "batch",
+			Usage:     "add all port mappings defined in a json file",
+			ArgsUsage: "<file>",
+			Action:    cmdBatch,
+		},
 	}
 
 	err := app.Run(os.Args)
@@ -116,6 +123,32 @@ func cmdAdd(c *cli.Context) error {
 	exitOnError(err)
 
 	fmt.Println("OK!")
+	return nil
+}
+
+func cmdBatch(c *cli.Context) error {
+	if len(c.Args()) < 1 {
+		showHelp(c)
+	}
+
+	path := c.Args()[0]
+	data, err := ioutil.ReadFile(path)
+	exitOnError(err)
+
+	list := make([]*tcpproxy.PortMappingInfo, 0)
+	err = json.Unmarshal(data, &list)
+	exitOnError(err)
+
+	client := createClient()
+	for _, pm := range list {
+		err := client.AddPortMapping(pm.LocalPort, pm.RemoteAddr)
+		if err != nil {
+			fmt.Printf("%5d -> %s: %v\n", pm.LocalPort, pm.RemoteAddr, err)
+		} else {
+			fmt.Printf("%5d -> %s: OK!\n", pm.LocalPort, pm.RemoteAddr)
+		}
+	}
+
 	return nil
 }
 

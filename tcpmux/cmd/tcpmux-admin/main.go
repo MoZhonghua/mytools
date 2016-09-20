@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -83,6 +84,12 @@ func main() {
 			Action:    cmdAdd,
 		},
 		{
+			Name:      "batch",
+			Usage:     "add all targets defined in a json file",
+			ArgsUsage: "<file>",
+			Action:    cmdBatch,
+		},
+		{
 			Name:      "delete",
 			Usage:     "delete target",
 			ArgsUsage: "<id>",
@@ -114,6 +121,32 @@ func cmdAdd(c *cli.Context) error {
 	exitOnError(err)
 
 	fmt.Println("OK!")
+	return nil
+}
+
+func cmdBatch(c *cli.Context) error {
+	if len(c.Args()) < 1 {
+		showHelp(c)
+	}
+
+	path := c.Args()[0]
+	data, err := ioutil.ReadFile(path)
+	exitOnError(err)
+
+	list := make([]*tcpmux.TargetInfo, 0)
+	err = json.Unmarshal(data, &list)
+	exitOnError(err)
+
+	client := createClient()
+	for _, pm := range list {
+		err := client.AddTarget(pm.Id, pm.Target)
+		if err != nil {
+			fmt.Printf("%6s -> %s: %v\n", pm.Id, pm.Target, err)
+		} else {
+			fmt.Printf("%6s -> %s: OK!\n", pm.Id, pm.Target)
+		}
+	}
+
 	return nil
 }
 
