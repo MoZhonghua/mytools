@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/MoZhonghua/mytools/tcpmux"
-	"github.com/codegangsta/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var debug bool

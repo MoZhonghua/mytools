@@ -13,7 +13,7 @@ import (
 
 	"github.com/MoZhonghua/mytools/upnp"
 	"github.com/MoZhonghua/mytools/util"
-	"github.com/codegangsta/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

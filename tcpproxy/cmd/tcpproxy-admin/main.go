@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/MoZhonghua/mytools/tcpproxy"
-	"github.com/codegangsta/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var debug bool
