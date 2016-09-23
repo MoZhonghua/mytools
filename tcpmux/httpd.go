@@ -12,12 +12,14 @@ import (
 
 type Httpd struct {
 	m      *Tcpmux
+	s      *Store
 	logger *log.Logger
 }
 
-func NewHttpd(m *Tcpmux, logger *log.Logger) *Httpd {
+func NewHttpd(m *Tcpmux, s *Store, logger *log.Logger) *Httpd {
 	d := &Httpd{
 		m:      m,
+		s:      s,
 		logger: logger,
 	}
 	return d
@@ -51,8 +53,15 @@ func (d *Httpd) handleAddTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = d.s.AddTarget(ti)
+	if err != nil {
+		util.WriteErrorResponse(w, 500, err)
+		return
+	}
+
 	err = d.m.AddTarget(ti.Id, ti.Target)
 	if err != nil {
+		d.s.DeleteTarget(ti.Id)
 		util.WriteErrorResponse(w, 500, err)
 		return
 	}
@@ -64,6 +73,12 @@ func (d *Httpd) handleDeleteTarget(w http.ResponseWriter, r *http.Request) {
 	id, err := util.QueryParam(r, "id")
 	if err != nil {
 		util.WriteErrorResponse(w, 400, err)
+		return
+	}
+
+	err = d.s.DeleteTarget(id)
+	if err != nil {
+		util.WriteErrorResponse(w, 500, err)
 		return
 	}
 

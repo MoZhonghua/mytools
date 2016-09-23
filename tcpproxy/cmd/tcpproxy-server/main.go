@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	port int
-	db   string
+	port   int
+	db     string
+	noLoad bool
 )
 
 var logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
@@ -21,6 +22,7 @@ func main() {
 	flag.IntVar(&port, "m", 3333, "admin port")
 	flag.StringVar(&db, "d", "/var/lib/tcpproxy/mappings.db",
 		"database to sync mappings")
+	flag.BoolVar(&noLoad, "n", false, "don't load targets from database when start")
 	flag.Parse()
 
 	pdir := path.Dir(db)
@@ -34,27 +36,29 @@ func main() {
 		logger.Fatalf("failed to open db: %v", err)
 	}
 
-	list, err := s.GetAllPortMapping()
-	if err != nil {
-		logger.Fatalf("failed to load port mapping list: %v", err)
-	}
-
 	p := tcpproxy.NewProxy(logger)
-	for _, pm := range list {
-		remoteAddr, err := net.ResolveTCPAddr("tcp4", pm.RemoteAddr)
+	if !noLoad {
+		list, err := s.GetAllPortMapping()
 		if err != nil {
-			logger.Printf("failed to resolve addr: %s - %v", pm.RemoteAddr, err)
-			continue
+			logger.Fatalf("failed to load port mapping list: %v", err)
 		}
 
-		err = p.AddPortMapping(pm.LocalPort, remoteAddr)
-		if err != nil {
-			logger.Printf("failed to map :%d -> %s - %v",
-				pm.LocalPort, pm.RemoteAddr, err)
-			continue
-		} else {
-			logger.Printf("map :%d -> %s OK", pm.LocalPort, pm.RemoteAddr)
-			continue
+		for _, pm := range list {
+			remoteAddr, err := net.ResolveTCPAddr("tcp4", pm.RemoteAddr)
+			if err != nil {
+				logger.Printf("failed to resolve addr: %s - %v", pm.RemoteAddr, err)
+				continue
+			}
+
+			err = p.AddPortMapping(pm.LocalPort, remoteAddr)
+			if err != nil {
+				logger.Printf("failed to map :%d -> %s - %v",
+					pm.LocalPort, pm.RemoteAddr, err)
+				continue
+			} else {
+				logger.Printf("map :%d -> %s OK", pm.LocalPort, pm.RemoteAddr)
+				continue
+			}
 		}
 	}
 
