@@ -13,12 +13,14 @@ import (
 
 type Httpd struct {
 	p      *Proxy
+	s      *Store
 	logger *log.Logger
 }
 
-func NewHttpd(p *Proxy, logger *log.Logger) *Httpd {
+func NewHttpd(p *Proxy, s *Store, logger *log.Logger) *Httpd {
 	d := &Httpd{
 		p:      p,
+		s:      s,
 		logger: logger,
 	}
 	return d
@@ -52,8 +54,15 @@ func (d *Httpd) handleAddPortMapping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = d.s.AddPortMapping(pmInfo)
+	if err != nil {
+		util.WriteErrorResponse(w, 500, err)
+		return
+	}
+
 	err = d.p.AddPortMapping(pmInfo.LocalPort, remoteAddr)
 	if err != nil {
+		d.s.DeletePortMapping(pmInfo.LocalPort)
 		util.WriteErrorResponse(w, 500, err)
 		return
 	}
@@ -71,6 +80,12 @@ func (d *Httpd) handleDeletePortMapping(w http.ResponseWriter, r *http.Request) 
 	localPort, err := strconv.ParseInt(localPortStr, 10, 32)
 	if err != nil {
 		util.WriteErrorResponse(w, 400, err)
+		return
+	}
+
+	err = d.s.DeletePortMapping(int(localPort))
+	if err != nil {
+		util.WriteErrorResponse(w, 500, err)
 		return
 	}
 
