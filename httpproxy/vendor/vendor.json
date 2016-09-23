@@ -1,0 +1,11 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "github.com/elazarl/goproxy",
+			"revision": "de25c6ed252fdc01e23dae49d6a86742bd790b12",
+			"revisionTime": "2016-08-28T23:16:06+03:00"
+		}
+	]
+}
