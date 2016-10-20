@@ -1,7 +1,6 @@
 package tcpproxy
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -26,16 +25,11 @@ func NewHttpd(p *Proxy, s *Store, logger *log.Logger) *Httpd {
 	return d
 }
 
-func (d *Httpd) Serv(port int) error {
+func (d *Httpd) Serv(l net.Listener) error {
 	m := mux.NewRouter()
 	m.Methods("POST").Path("/add").HandlerFunc(d.handleAddPortMapping)
 	m.Methods("DELETE").Path("/delete").HandlerFunc(d.handleDeletePortMapping)
 	m.Methods("GET").Path("/list").HandlerFunc(d.handleListPortMapping)
-
-	l, err := net.Listen("tcp4", fmt.Sprintf(":%d", port))
-	if err != nil {
-		return err
-	}
 
 	return http.Serve(l, m)
 }

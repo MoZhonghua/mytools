@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	port   int
-	db     string
-	noLoad bool
+	adminAddr string
+	db        string
+	noLoad    bool
 )
 
 var logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
 func main() {
-	flag.IntVar(&port, "m", 3333, "admin port")
+	flag.StringVar(&adminAddr, "m", "127.0.0.1:3333", "admin api address")
 	flag.StringVar(&db, "d", "/var/lib/tcpproxy/mappings.db",
 		"database to sync mappings")
 	flag.BoolVar(&noLoad, "n", false, "don't load targets from database when start")
@@ -63,7 +63,12 @@ func main() {
 	}
 
 	d := tcpproxy.NewHttpd(p, s, logger)
-	err = d.Serv(port)
+	l, err := net.Listen("tcp4", adminAddr)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	defer l.Close()
+	err = d.Serv(l)
 	if err != nil {
 		logger.Fatal(err)
 	}
