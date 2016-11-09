@@ -7,6 +7,8 @@ import (
 
 func pipe(r net.Conn, w net.Conn, done *sync.WaitGroup) {
 	defer done.Done()
+	w.(*net.TCPConn).SetKeepAlive(true)
+	r.(*net.TCPConn).SetKeepAlive(true)
 
 	buf := make([]byte, 4096)
 	for {
