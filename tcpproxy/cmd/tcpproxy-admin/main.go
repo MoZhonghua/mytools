@@ -79,6 +79,11 @@ func main() {
 			Action: cmdList,
 		},
 		{
+			Name:   "dump",
+			Usage:  "dump port mapping",
+			Action: cmdDump,
+		},
+		{
 			Name:      "add",
 			Usage:     "add port mapping",
 			ArgsUsage: "<localPort> <remoteAddr(ip:port)>",
@@ -168,6 +173,18 @@ func cmdDelete(c *cli.Context) error {
 }
 
 func cmdList(c *cli.Context) error {
+	client := createClient()
+	m, err := client.ListPortMapping()
+	exitOnError(err)
+
+	for _, p := range m {
+		fmt.Printf("%-5d -> %s\n", p.LocalPort, p.RemoteAddr)
+	}
+
+	return nil
+}
+
+func cmdDump(c *cli.Context) error {
 	client := createClient()
 	m, err := client.ListPortMapping()
 	exitOnError(err)
