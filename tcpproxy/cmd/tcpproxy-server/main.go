@@ -20,7 +20,7 @@ var logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
 func main() {
 	flag.StringVar(&adminAddr, "m", "127.0.0.1:3333", "admin api address")
-	flag.StringVar(&db, "d", "/var/lib/tcpproxy/mappings.db",
+	flag.StringVar(&db, "d", "/var/lib/tcpproxy/data.db",
 		"database to sync mappings")
 	flag.BoolVar(&noLoad, "n", false, "don't load targets from database when start")
 	flag.Parse()
