@@ -1,27 +1,39 @@
 package tcpproxy
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"sync"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/boltdb/bolt"
 )
+
+var kBucket = []byte("portmapping")
+
+func portToId(port int) []byte {
+	id := fmt.Sprintf("%d", port)
+	return []byte(id)
+}
 
 type Store struct {
 	lock sync.Mutex
-	db   *sql.DB
+	db   *bolt.DB
 }
 
 func NewStore(path string) (*Store, error) {
-	db, err := sql.Open("sqlite3", path)
+	db, err := bolt.Open(path, 0600, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.Exec(`create table if not exists portmapping 
-	(id text primary key, data text)`)
+	err = db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists(kBucket)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -33,36 +45,33 @@ func (s *Store) CleanAndUpdate(pms []*PortMappingInfo) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	err = func() error {
-		_, err := tx.Exec("delete from portmapping")
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		err := tx.DeleteBucket(kBucket)
 		if err != nil {
 			return err
 		}
+
+		b, err := tx.CreateBucketIfNotExists(kBucket)
+		if err != nil {
+			return err
+		}
+
 		for _, pm := range pms {
 			data, err := json.Marshal(pm)
 			if err != nil {
 				return err
 			}
 
-			id := fmt.Sprintf("%d", pm.LocalPort)
-			_, err = tx.Exec("insert into portmapping(id, data) values (?, ?)",
-				id, data)
-			return err
+			err = b.Put(portToId(pm.LocalPort), data)
+			if err != nil {
+				return err
+			}
 		}
-		return nil
-	}()
 
-	if err == nil {
-		return tx.Commit()
-	} else {
-		tx.Rollback()
-		return err
-	}
+		return nil
+	})
+
+	return err
 }
 
 func (s *Store) AddPortMapping(pm *PortMappingInfo) error {
@@ -73,43 +82,42 @@ func (s *Store) AddPortMapping(pm *PortMappingInfo) error {
 		return err
 	}
 
-	id := fmt.Sprintf("%d", pm.LocalPort)
-
-	_, err = s.db.Exec("insert into portmapping(id, data) values (?, ?)", id, data)
-	return err
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(kBucket)
+		return b.Put(portToId(pm.LocalPort), data)
+	})
 }
 
 func (s *Store) DeletePortMapping(localPort int) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	id := fmt.Sprintf("%d", localPort)
-	_, err := s.db.Exec("delete from portmapping where id = ?", id)
-	return err
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(kBucket)
+		return b.Delete(portToId(localPort))
+	})
 }
 
 func (s *Store) GetAllPortMapping() ([]*PortMappingInfo, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	rows, err := s.db.Query("select data from portmapping")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
 	result := make([]*PortMappingInfo, 0)
-	for rows.Next() {
-		var data string
-		err := rows.Scan(&data)
-		if err != nil {
-			return nil, err
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(kBucket)
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			pm := &PortMappingInfo{}
+			err := json.Unmarshal(v, pm)
+			if err != nil {
+				return err
+			}
+			result = append(result, pm)
 		}
+		return nil
+	})
 
-		pm := &PortMappingInfo{}
-		err = json.Unmarshal([]byte(data), pm)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, pm)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
