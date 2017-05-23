@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"runtime"
 	"os"
 	"path"
 
@@ -18,10 +19,17 @@ var (
 
 var logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
+func getDefaultDatabaseFile() string {
+	if runtime.GOOS == "windows" {
+		return "data.db"
+	} else {
+		return "/var/lib/tcpproxy/data.db"
+	}
+}
+
 func main() {
 	flag.StringVar(&adminAddr, "m", "127.0.0.1:3333", "admin api address")
-	flag.StringVar(&db, "d", "/var/lib/tcpproxy/data.db",
-		"database to sync mappings")
+	flag.StringVar(&db, "d", getDefaultDatabaseFile(), "database to save mappings")
 	flag.BoolVar(&noLoad, "n", false, "don't load targets from database when start")
 	flag.Parse()
 
