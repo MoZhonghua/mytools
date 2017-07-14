@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net"
-	"runtime"
 	"os"
 	"path"
+	"runtime"
 
 	"github.com/MoZhonghua/mytools/tcpproxy"
+	log "github.com/Sirupsen/logrus"
 )
 
 var (
@@ -16,8 +16,6 @@ var (
 	db        string
 	noLoad    bool
 )
-
-var logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
 func getDefaultDatabaseFile() string {
 	if runtime.GOOS == "windows" {
@@ -36,48 +34,48 @@ func main() {
 	pdir := path.Dir(db)
 	err := os.MkdirAll(pdir, 0755)
 	if err != nil && !os.IsExist(err) {
-		logger.Fatalf("failed to create db dir: %v", err)
+		log.Fatalf("failed to create db dir: %v", err)
 	}
 
 	s, err := tcpproxy.NewStore(db)
 	if err != nil {
-		logger.Fatalf("failed to open db: %v", err)
+		log.Fatalf("failed to open db: %v", err)
 	}
 
-	p := tcpproxy.NewProxy(logger)
+	p := tcpproxy.NewProxy()
 	if !noLoad {
 		list, err := s.GetAllPortMapping()
 		if err != nil {
-			logger.Fatalf("failed to load port mapping list: %v", err)
+			log.Fatalf("failed to load port mapping list: %v", err)
 		}
 
 		for _, pm := range list {
 			remoteAddr, err := net.ResolveTCPAddr("tcp4", pm.RemoteAddr)
 			if err != nil {
-				logger.Printf("failed to resolve addr: %s - %v", pm.RemoteAddr, err)
+				log.Printf("failed to resolve addr: %s - %v", pm.RemoteAddr, err)
 				continue
 			}
 
 			err = p.AddPortMapping(pm.LocalPort, remoteAddr)
 			if err != nil {
-				logger.Printf("failed to map :%d -> %s - %v",
+				log.Printf("failed to map :%d -> %s - %v",
 					pm.LocalPort, pm.RemoteAddr, err)
 				continue
 			} else {
-				logger.Printf("map :%d -> %s OK", pm.LocalPort, pm.RemoteAddr)
+				log.Printf("map :%d -> %s OK", pm.LocalPort, pm.RemoteAddr)
 				continue
 			}
 		}
 	}
 
-	d := tcpproxy.NewHttpd(p, s, logger)
+	d := tcpproxy.NewHttpd(p, s)
 	l, err := net.Listen("tcp4", adminAddr)
 	if err != nil {
-		logger.Fatal(err)
+		log.Fatal(err)
 	}
 	defer l.Close()
 	err = d.Serv(l)
 	if err != nil {
-		logger.Fatal(err)
+		log.Fatal(err)
 	}
 }

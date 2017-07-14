@@ -2,7 +2,6 @@ package tcpproxy
 
 import (
 	"errors"
-	"log"
 	"net"
 	"sync"
 )
@@ -15,13 +14,11 @@ var (
 type Proxy struct {
 	mu       sync.Mutex
 	mappings map[int]*portMapping
-	logger   *log.Logger
 }
 
-func NewProxy(logger *log.Logger) *Proxy {
+func NewProxy() *Proxy {
 	p := &Proxy{
 		mappings: make(map[int]*portMapping),
-		logger:   logger,
 	}
 	return p
 }
@@ -35,7 +32,7 @@ func (p *Proxy) AddPortMapping(localPort int, remoteAddr *net.TCPAddr) error {
 		return ErrLocalPortUsed
 	}
 
-	m := newPortMapping(localPort, remoteAddr, p.logger)
+	m := newPortMapping(localPort, remoteAddr)
 	err := m.start()
 	if err != nil {
 		return err

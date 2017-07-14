@@ -1,7 +1,6 @@
 package tcpproxy
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -11,16 +10,14 @@ import (
 )
 
 type Httpd struct {
-	p      *Proxy
-	s      *Store
-	logger *log.Logger
+	p *Proxy
+	s *Store
 }
 
-func NewHttpd(p *Proxy, s *Store, logger *log.Logger) *Httpd {
+func NewHttpd(p *Proxy, s *Store) *Httpd {
 	d := &Httpd{
-		p:      p,
-		s:      s,
-		logger: logger,
+		p: p,
+		s: s,
 	}
 	return d
 }

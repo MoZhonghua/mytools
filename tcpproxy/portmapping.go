@@ -2,9 +2,10 @@ package tcpproxy
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type portMapping struct {
@@ -12,16 +13,13 @@ type portMapping struct {
 	remoteAddr  *net.TCPAddr
 	stopCh      chan int
 	waitStopped sync.WaitGroup
-	logger      *log.Logger
 }
 
-func newPortMapping(localPort int, remoteAddr *net.TCPAddr,
-	logger *log.Logger) *portMapping {
+func newPortMapping(localPort int, remoteAddr *net.TCPAddr) *portMapping {
 	m := &portMapping{
 		localPort:  localPort,
 		remoteAddr: remoteAddr,
 		stopCh:     make(chan int),
-		logger:     logger,
 	}
 	return m
 }
@@ -29,7 +27,7 @@ func newPortMapping(localPort int, remoteAddr *net.TCPAddr,
 func (m *portMapping) stop() {
 	close(m.stopCh)
 	m.waitStopped.Wait()
-	m.logger.Printf("close port mapping :%d -> %v", m.localPort, m.remoteAddr)
+	log.Infof("close port mapping :%d -> %v", m.localPort, m.remoteAddr)
 }
 
 func (m *portMapping) servLoop(l net.Listener) {
@@ -45,10 +43,10 @@ func (m *portMapping) servLoop(l net.Listener) {
 			}
 			conn, err := l.Accept()
 			if err != nil {
-				m.logger.Printf("%v", err)
+				log.Infof("%v", err)
 				continue
 			}
-			m.logger.Printf("new connection @ %v", conn.LocalAddr())
+			log.Infof("new connection @ %v", conn.LocalAddr())
 			connCh <- conn
 		}
 	}()
@@ -73,7 +71,7 @@ func (m *portMapping) start() error {
 		return err
 	}
 
-	m.logger.Printf("new port mapping :%d -> %v", m.localPort, m.remoteAddr)
+	log.Infof("new port mapping :%d -> %v", m.localPort, m.remoteAddr)
 
 	go m.servLoop(l)
 	return nil
@@ -87,7 +85,7 @@ func (m *portMapping) handleConn(l net.Conn) error {
 	}
 	defer r.Close()
 
-	m.logger.Printf("pipe %v -> %v ", l.LocalAddr(), r.RemoteAddr())
+	log.Infof("pipe %v -> %v ", l.LocalAddr(), r.RemoteAddr())
 
 	var wg sync.WaitGroup
 	wg.Add(2)
