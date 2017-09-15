@@ -9,11 +9,11 @@ import (
 	"strconv"
 
 	"github.com/MoZhonghua/mytools/tcpproxy"
+	"github.com/MoZhonghua/mytools/util"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var debug bool
-var proxy string
 var server string
 
 func marshalData(v interface{}) string {
@@ -57,12 +57,6 @@ func main() {
 			Name:        "debug",
 			Usage:       "debug",
 			Destination: &debug,
-		},
-		&cli.StringFlag{
-			Name:        "proxy",
-			Usage:       "proxy address",
-			Value:       "",
-			Destination: &proxy,
 		},
 		&cli.StringFlag{
 			Name:        "server",
@@ -110,7 +104,8 @@ func main() {
 }
 
 func createClient() *tcpproxy.Client {
-	client, err := tcpproxy.NewClient(server, logger, proxy, debug)
+	util.SetHttpClientDebugMode(debug)
+	client, err := tcpproxy.NewClient(server)
 	exitOnError(err)
 	return client
 }

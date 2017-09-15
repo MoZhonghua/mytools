@@ -8,46 +8,82 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"sync"
+	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
+type httpClientGlobalConfig struct {
+	debug bool
+	mu    sync.Mutex
+}
+
+func newDefaultGlobalConfig() *httpClientGlobalConfig {
+	gcfg := &httpClientGlobalConfig{}
+	gcfg.debug = false
+	return gcfg
+}
+
+var (
+	gcfg = newDefaultGlobalConfig()
+)
+
+func SetHttpClientDebugMode(flag bool) {
+	gcfg.mu.Lock()
+	defer gcfg.mu.Unlock()
+	gcfg.debug = flag
+}
+
+func GetHttpClientDebugMode() bool {
+	gcfg.mu.Lock()
+	defer gcfg.mu.Unlock()
+	return gcfg.debug
+}
+
 type HttpClientConfig struct {
-	Debug            bool
-	Logger           *log.Logger
 	Proxy            string
 	NoFollowRedirect bool
 	NoTLSVerify      bool
+	DialTimeout      time.Duration
 }
 
 type HttpClient struct {
 	tr               *http.Transport
 	client           *http.Client
-	logger           *log.Logger
 	noFollowRedirect bool
 	debug            bool
 	debugLock        sync.Mutex
 }
 
+var DefaultHttpClient *HttpClient
+
+func init() {
+	DefaultHttpClient, _ = NewHttpClient(&HttpClientConfig{})
+}
+
 func NewHttpClient(cfg *HttpClientConfig) (*HttpClient, error) {
 	tr := &http.Transport{}
+	tr.MaxIdleConnsPerHost = 1
+	timeout := cfg.DialTimeout
+	tr.Dial = func(network string, addr string) (net.Conn, error) {
+		return net.DialTimeout(network, addr, timeout)
+	}
 	httpClient := &http.Client{
 		Transport: tr,
 	}
+	httpClient.Timeout = 0
 	if len(cfg.Proxy) != 0 {
 		proxyUrl, err := url.Parse(cfg.Proxy)
 		if err != nil {
 			return nil, fmt.Errorf("invalid proxy: %s", err.Error())
 		}
 		tr.Proxy = http.ProxyURL(proxyUrl)
-	}
-
-	if cfg.Logger == nil {
-		panic("nil logger")
 	}
 
 	if cfg.NoTLSVerify {
@@ -59,8 +95,6 @@ func NewHttpClient(cfg *HttpClientConfig) (*HttpClient, error) {
 	c := &HttpClient{
 		tr:               tr,
 		client:           httpClient,
-		logger:           cfg.Logger,
-		debug:            cfg.Debug,
 		noFollowRedirect: cfg.NoFollowRedirect,
 	}
 
@@ -94,7 +128,7 @@ func (c *HttpClient) DoGetAndParseResult(url string, result interface{}) error {
 }
 
 func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
-	if c.debug {
+	if c.debug || GetHttpClientDebugMode() {
 		c.DumpRequest(req, os.Stdout)
 	}
 
@@ -110,7 +144,7 @@ func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	if c.debug {
+	if c.debug || GetHttpClientDebugMode() {
 		c.DumpResponse(resp, os.Stdout)
 	}
 
@@ -137,19 +171,16 @@ func (c *HttpClient) DoJsonPost(url string, data interface{}) (*http.Response, e
 
 func (c *HttpClient) ParseJsonResp(resp *http.Response, result interface{}) error {
 	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("failed to read request body: %s", err)
+		return err
+	}
 	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			c.logger.Printf("failed to read request body: %s", err)
-			return err
-		}
-		if c.debug {
-			c.logger.Printf("server returns: %s - %s",
-				resp.Status, string(body))
-		}
+		log.Debugf("server returns: %s - %s", resp.Status, string(body))
 		return fmt.Errorf("http error %s: %s", resp.Status, string(body))
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+
 	if err != nil {
 		return err
 	}

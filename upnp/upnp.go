@@ -3,7 +3,10 @@ package upnp
 import (
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"net/http"
+
+	"github.com/MoZhonghua/mytools/util"
 )
 
 type UPnpService struct {
@@ -45,7 +48,11 @@ func (d *UPnpDevice) GetChildServices(serviceType string) []UPnpService {
 }
 
 func GetUPnPData(deviceDescriptionLocation string) (*UPnPRoot, error) {
-	response, err := http.Get(deviceDescriptionLocation)
+	req, err := http.NewRequest("GET", deviceDescriptionLocation, nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := util.DefaultHttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -62,4 +69,58 @@ func GetUPnPData(deviceDescriptionLocation string) (*UPnPRoot, error) {
 	}
 
 	return &upnpRoot, nil
+}
+
+func AddUpnpTcpPortMapping(igdServer string, externalPort int,
+	internalIp string, internalPort int) (string, error) {
+	igdURL := fmt.Sprintf("http://%s:1900/igd.xml", igdServer)
+	root, err := GetUPnPData(igdURL)
+	if err != nil {
+		return "", err
+	}
+
+	igd, err := GetIGDDevice(root, igdURL)
+	if err != nil {
+		return "", err
+	}
+
+	for _, s := range igd.Services {
+		externalIP, err := s.GetExternalIPAddress()
+		if err != nil {
+			return "", err
+		}
+
+		err = s.AddPortMapping("TCP", externalPort, internalIp, internalPort, 0, "")
+		if err != nil {
+			return "", err
+		}
+
+		return externalIP.String(), nil
+	}
+
+	return "", errors.New("can't create port mapping")
+}
+
+func DeleteUpnpTcpPortMapping(igdServer string, externalPort int) error {
+	igdURL := fmt.Sprintf("http://%s:1900/igd.xml", igdServer)
+	root, err := GetUPnPData(igdURL)
+	if err != nil {
+		return err
+	}
+
+	igd, err := GetIGDDevice(root, igdURL)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range igd.Services {
+		err = s.DeletePortMapping("TCP", externalPort)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return nil
 }

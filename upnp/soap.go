@@ -9,9 +9,11 @@ import (
 	"strings"
 
 	"github.com/MoZhonghua/mytools/util"
+	log "github.com/Sirupsen/logrus"
 )
 
-func soapRequest(c *util.HttpClient, url, service, function, message string) ([]byte, error) {
+func soapRequest(url, service, function, message string) ([]byte, error) {
+	log.Infof("-----------------")
 	tpl := `<?xml version="1.0" ?>
 	<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
 	<s:Body>%s</s:Body>
@@ -21,6 +23,7 @@ func soapRequest(c *util.HttpClient, url, service, function, message string) ([]
 
 	body := fmt.Sprintf(tpl, message)
 
+	log.Infof("-----------------")
 	req, err := http.NewRequest("POST", url, strings.NewReader(body))
 	if err != nil {
 		return resp, err
@@ -37,7 +40,8 @@ func soapRequest(c *util.HttpClient, url, service, function, message string) ([]
 	// l.Debugln("SOAP Action: " + req.Header.Get("SOAPAction"))
 	// l.Debugln("SOAP Request:\n\n" + body)
 
-	r, err := c.Do(req)
+	log.Infof("-----------------")
+	r, err := util.DefaultHttpClient.Do(req)
 	if err != nil {
 		// l.Debugln(err)
 		return resp, err

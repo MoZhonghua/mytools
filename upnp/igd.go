@@ -8,8 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/MoZhonghua/mytools/util"
+	log "github.com/Sirupsen/logrus"
 )
 
 type IGDService struct {
@@ -22,7 +21,7 @@ type IGD struct {
 	UUID           string
 	FriendlyName   string
 	DescriptionURL string
-	LocalIPAddress net.IP
+	internalIP     net.IP
 	Services       []IGDService
 }
 
@@ -50,7 +49,7 @@ func GetIGDDevice(root *UPnPRoot, rootURL string) (*IGD, error) {
 	// We do this in a fairly roundabout way by connecting to the IGD and
 	// checking the address of the local end of the socket. I'm open to
 	// suggestions on a better way to do this...
-	localIPAddress, err := localIP(rootURL)
+	internalIP, err := localIP(rootURL)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,7 @@ func GetIGDDevice(root *UPnPRoot, rootURL string) (*IGD, error) {
 		UUID:           root.Device.UDN,
 		FriendlyName:   root.Device.FriendlyName,
 		Services:       services,
-		LocalIPAddress: localIPAddress,
+		internalIP:     internalIP,
 		DescriptionURL: rootURL,
 	}, nil
 }
@@ -90,6 +89,7 @@ func GetIGDServices(device *UPnpDevice, rootURL string) ([]IGDService, error) {
 
 func getServices(device *UPnpDevice, rootURL string, wanDeviceURN string, wanConnectionURN string, URNs []string) []IGDService {
 	var result []IGDService
+	log.Infof("-----------------")
 
 	devices := device.GetChildDevices(wanDeviceURN)
 	if len(devices) < 1 {
@@ -144,10 +144,10 @@ func replaceRawPath(u *url.URL, rp string) {
 }
 
 // AddPortMapping adds a port mapping to the specified IGD service.
-func (s *IGDService) AddPortMapping(c *util.HttpClient,
-	localIPAddress string, protocol string,
-	internalPort, externalPort int, description string,
-	duration time.Duration) error {
+func (s *IGDService) AddPortMapping(
+	protocol string, externalPort int,
+	internalIP string, internalPort int, duration time.Duration,
+	description string) error {
 	tpl := `<u:AddPortMapping xmlns:u="%s">
 	<NewRemoteHost></NewRemoteHost>
 	<NewExternalPort>%d</NewExternalPort>
@@ -158,9 +158,9 @@ func (s *IGDService) AddPortMapping(c *util.HttpClient,
 	<NewPortMappingDescription>%s</NewPortMappingDescription>
 	<NewLeaseDuration>%d</NewLeaseDuration>
 	</u:AddPortMapping>`
-	body := fmt.Sprintf(tpl, s.URN, externalPort, protocol, internalPort, localIPAddress, description, duration/time.Second)
+	body := fmt.Sprintf(tpl, s.URN, externalPort, protocol, internalPort, internalIP, description, duration/time.Second)
 
-	response, err := soapRequest(c, s.URL, s.URN, "AddPortMapping", body)
+	response, err := soapRequest(s.URL, s.URN, "AddPortMapping", body)
 	if err != nil && duration > 0 {
 		// Try to repair error code 725 - OnlyPermanentLeasesSupported
 		envelope := &soapErrorResponse{}
@@ -168,7 +168,8 @@ func (s *IGDService) AddPortMapping(c *util.HttpClient,
 			return unmarshalErr
 		}
 		if envelope.ErrorCode == 725 {
-			return s.AddPortMapping(c, localIPAddress, protocol, externalPort, internalPort, description, 0)
+			return s.AddPortMapping(protocol, externalPort,
+				internalIP, internalPort, 0, description)
 		}
 	}
 
@@ -176,8 +177,7 @@ func (s *IGDService) AddPortMapping(c *util.HttpClient,
 }
 
 // DeletePortMapping deletes a port mapping from the specified IGD service.
-func (s *IGDService) DeletePortMapping(c *util.HttpClient,
-	protocol string, externalPort int) error {
+func (s *IGDService) DeletePortMapping(protocol string, externalPort int) error {
 	tpl := `<u:DeletePortMapping xmlns:u="%s">
 	<NewRemoteHost></NewRemoteHost>
 	<NewExternalPort>%d</NewExternalPort>
@@ -185,19 +185,19 @@ func (s *IGDService) DeletePortMapping(c *util.HttpClient,
 	</u:DeletePortMapping>`
 	body := fmt.Sprintf(tpl, s.URN, externalPort, protocol)
 
-	_, err := soapRequest(c, s.URL, s.URN, "DeletePortMapping", body)
+	_, err := soapRequest(s.URL, s.URN, "DeletePortMapping", body)
 	return err
 }
 
 // GetExternalIPAddress queries the IGD service for its external IP address.
 // Returns nil if the external IP address is invalid or undefined, along with
 // any relevant errors
-func (s *IGDService) GetExternalIPAddress(c *util.HttpClient) (net.IP, error) {
+func (s *IGDService) GetExternalIPAddress() (net.IP, error) {
 	tpl := `<u:GetExternalIPAddress xmlns:u="%s" />`
 
 	body := fmt.Sprintf(tpl, s.URN)
 
-	response, err := soapRequest(c, s.URL, s.URN, "GetExternalIPAddress", body)
+	response, err := soapRequest(s.URL, s.URN, "GetExternalIPAddress", body)
 
 	if err != nil {
 		return nil, err

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -43,6 +42,11 @@ func fail(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	fmt.Fprintln(os.Stderr, "")
 	os.Exit(-1)
+}
+
+func setupDebug() {
+	fmt.Printf("debug: %v\n", debug)
+	util.SetHttpClientDebugMode(debug)
 }
 
 func main() {
@@ -102,20 +106,8 @@ func main() {
 	}
 }
 
-func createHttpClient() *util.HttpClient {
-	cfg := &util.HttpClientConfig{}
-	cfg.Proxy = proxy
-	cfg.Debug = debug
-	cfg.Logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
-
-	c, err := util.NewHttpClient(cfg)
-	if err != nil {
-		fail("error: %v", err)
-	}
-	return c
-}
-
 func cmdListInterface(c *cli.Context) error {
+	setupDebug()
 	intfs, err := net.Interfaces()
 	if err != nil {
 		fail("error: %v", err)
@@ -143,6 +135,7 @@ func doSearch(wg *sync.WaitGroup, intf *net.Interface, deviceType string,
 }
 
 func cmdSSDPSearch(c *cli.Context) error {
+	setupDebug()
 	if len(c.Args()) < 1 {
 		cli.ShowSubcommandHelp(c)
 		os.Exit(1)
@@ -195,26 +188,13 @@ func parseIPPort(s string) (net.IP, int, error) {
 }
 
 func cmdAddPortMapping(c *cli.Context) error {
+	setupDebug()
 	if len(c.Args()) < 3 {
 		cli.ShowSubcommandHelp(c)
 		os.Exit(1)
 	}
 
-	hc := createHttpClient()
-
 	igdDeviceIP := c.Args()[0]
-	igdURL := fmt.Sprintf("http://%s:1900/igd.xml", igdDeviceIP)
-
-	root, err := upnp.GetUPnPData(igdURL)
-	if err != nil {
-		fail("error: %v", err)
-	}
-
-	igd, err := upnp.GetIGDDevice(root, igdURL)
-	if err != nil {
-		fail("error: %v", err)
-	}
-
 	localIP, localPort, err := parseIPPort(c.Args()[1])
 	if err != nil {
 		fail("error: %v", err)
@@ -224,58 +204,34 @@ func cmdAddPortMapping(c *cli.Context) error {
 		fail("error: %v", err)
 	}
 
-	for _, s := range igd.Services {
-		externalIP, err := s.GetExternalIPAddress(hc)
-		if err != nil {
-			fail("error: %v", err)
-		}
-
-		err = s.AddPortMapping(hc, localIP.String(),
-			"TCP", localPort, externalPort, "", 0)
-		if err != nil {
-			fail("error: %v", err)
-		}
-
-		fmt.Printf("Port mapping %s:%d -> %s:%d OK!\n",
-			externalIP.String(), externalPort,
-			localIP.String(), localPort)
-
-		return nil
+	externalIP, err := upnp.AddUpnpTcpPortMapping(igdDeviceIP, externalPort,
+		localIP.String(), localPort)
+	if err != nil {
+		fail("error: %v", err)
 	}
+
+	fmt.Printf("Port mapping %s:%d -> %s:%d OK!\n",
+		externalIP, externalPort,
+		localIP.String(), localPort)
+
 	return nil
 }
 
 func cmdDelPortMapping(c *cli.Context) error {
+	setupDebug()
 	if len(c.Args()) < 2 {
 		cli.ShowSubcommandHelp(c)
 		os.Exit(1)
 	}
 
 	igdDeviceIP := c.Args()[0]
-	igdURL := fmt.Sprintf("http://%s:1900/igd.xml", igdDeviceIP)
-
-	root, err := upnp.GetUPnPData(igdURL)
-	if err != nil {
-		fail("error: %v", err)
-	}
-
-	igd, err := upnp.GetIGDDevice(root, igdURL)
-	if err != nil {
-		fail("error: %v", err)
-	}
-
 	externalPort, err := parseInt(c.Args()[1])
 	if err != nil {
 		fail("error: %v", err)
 	}
-
-	hc := createHttpClient()
-	for _, s := range igd.Services {
-		err := s.DeletePortMapping(hc, "TCP", externalPort)
-		if err != nil {
-			fail("error: %v", err)
-		}
+	err = upnp.DeleteUpnpTcpPortMapping(igdDeviceIP, externalPort)
+	if err != nil {
+		fail("error: %v", err)
 	}
-	fmt.Println("OK!")
 	return nil
 }
