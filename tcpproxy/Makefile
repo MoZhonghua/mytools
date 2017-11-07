@@ -4,15 +4,16 @@ SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
 .PHONY: default
 default: all
 
+LDFLAGS="-linkmode external -extldflags -static"
 
 tcpproxy-admin=bin/tcpproxy-admin
 $(tcpproxy-admin): $(SOURCES)
-	go build -o ${tcpproxy-admin} ./cmd/tcpproxy-admin
+	go build -ldflags $(LDFLAGS) -o ${tcpproxy-admin} ./cmd/tcpproxy-admin
 
 
 tcpproxy-server=bin/tcpproxy-server
 $(tcpproxy-server): $(SOURCES)
-	go build -o ${tcpproxy-server} ./cmd/tcpproxy-server
+	go build -ldflags $(LDFLAGS) -o ${tcpproxy-server} ./cmd/tcpproxy-server
 
 
 all: $(tcpproxy-admin) $(tcpproxy-server) 
