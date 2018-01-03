@@ -64,7 +64,7 @@ func main() {
 	var rootdir string
 
 	flag.StringVar(&rootdir, "d", ".", "root directory")
-	flag.IntVar(&port, "p", 80, "listening port")
+	flag.IntVar(&port, "p", 8080, "listening port")
 	flag.Parse()
 
 	info, err := os.Stat(rootdir)
