@@ -6,8 +6,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 
+	"github.com/atotto/clipboard"
 	"github.com/gorilla/context"
 	"github.com/keep94/weblogs"
 )
@@ -60,28 +63,43 @@ func main() {
 	var port int
 	var rootdir string
 
-	flag.StringVar(&rootdir, "r", ".", "root directory")
+	flag.StringVar(&rootdir, "d", ".", "root directory")
 	flag.IntVar(&port, "p", 80, "listening port")
 	flag.Parse()
+
+	info, err := os.Stat(rootdir)
+	if err != nil {
+		panic(err)
+	}
+
+	filename := ""
+	if !info.IsDir() {
+		filename = filepath.Base(rootdir)
+		rootdir = filepath.Dir(rootdir)
+	}
 
 	absDir, err := filepath.Abs(rootdir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	ipList := getIPList()
 	log.Printf("Serve %s at :%d ...\n", absDir, port)
-	for _, ip := range getIPList() {
-		log.Printf("http://%s:%d", ip, port)
+	if len(ipList) != 0 {
+		for _, ip := range ipList {
+			log.Printf("http://%s:%d", ip, port)
+		}
+
+		if filename == "" {
+			clipboard.WriteAll(fmt.Sprintf("http://%s:%d", ipList[0], port))
+		} else {
+			clipboard.WriteAll(fmt.Sprintf("http://%s:%d/%s",
+				ipList[0], port, url.PathEscape(filename)))
+		}
 	}
 	http.Handle("/", http.FileServer(http.Dir(absDir)))
 	handler := context.ClearHandler(weblogs.Handler(http.DefaultServeMux))
-
-	l, err := net.Listen("tcp4", fmt.Sprintf(":%d", port))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = http.Serve(l, handler)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
 	if err != nil {
 		log.Fatal(err)
 	}
