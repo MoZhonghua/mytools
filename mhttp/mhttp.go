@@ -90,13 +90,21 @@ func main() {
 			log.Printf("http://%s:%d", ip, port)
 		}
 
+		msg := ""
 		if filename == "" {
-			clipboard.WriteAll(fmt.Sprintf("http://%s:%d", ipList[0], port))
+			msg = fmt.Sprintf("http://%s:%d", ipList[0], port)
 		} else {
-			clipboard.WriteAll(fmt.Sprintf("http://%s:%d/%s",
-				ipList[0], port, url.PathEscape(filename)))
+			msg = fmt.Sprintf("http://%s:%d/%s",
+				ipList[0], port, url.PathEscape(filename))
+		}
+		err := clipboard.WriteAll(msg)
+		if err != nil {
+			log.Printf("failed to copy address to clipboard: %v", err)
+		} else {
+			log.Printf("!!! Address has been copied to your clipboard !!!")
 		}
 	}
+
 	http.Handle("/", http.FileServer(http.Dir(absDir)))
 	handler := context.ClearHandler(weblogs.Handler(http.DefaultServeMux))
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
