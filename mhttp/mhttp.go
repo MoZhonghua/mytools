@@ -101,7 +101,10 @@ func main() {
 		if err != nil {
 			log.Printf("failed to copy address to clipboard: %v", err)
 		} else {
-			log.Printf("!!! Address has been copied to your clipboard !!!")
+			log.Println("=================================================")
+			log.Printf("Address has been copied to your clipboard !!!")
+			log.Printf("%s", msg)
+			log.Println("=================================================")
 		}
 	}
 
