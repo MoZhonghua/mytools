@@ -63,9 +63,13 @@ func main() {
 	var port int
 	var rootdir string
 
-	flag.StringVar(&rootdir, "d", ".", "root directory")
 	flag.IntVar(&port, "p", 8080, "listening port")
 	flag.Parse()
+
+	rootdir = "."
+	if len(flag.Args()) > 0 {
+		rootdir = flag.Args()[0]
+	}
 
 	info, err := os.Stat(rootdir)
 	if err != nil {
